@@ -1,0 +1,231 @@
+ from streamlit.runtime.scriptrunner import add_script_run_ctx
+ from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
+
+import streamlit as st
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from streamlit.runtime.scriptrunner import add_script_run_ctx
+from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
+import threading
+from dotenv import load_dotenv
+
+load_dotenv()
+
+st.set_page_config("LLM TEST")
+
+MODEL_CHOICES = ['gpt-3.5-turbo', 'gpt-4-turbo']
+selected_models = st.multiselect("Select models:", MODEL_CHOICES, default=MODEL_CHOICES)
+
+def call_chain(ctx, model_name, prompt):
+    add_script_run_ctx(threading.current_thread(), ctx)
+    try:
+        llm = ChatOpenAI(model=model_name, temperature=0, streaming=True)
+        input = ChatPromptTemplate.from_messages(
+            [
+                ("system", "You are a helpful assistant that answers questions."),
+                ("human", "{input}")
+            ]
+        )
+        chain = input | llm
+        for i in chain.stream(input=prompt):
+            yield i.content
+    except Exception as e:
+        yield f"Error: {str(e)}"
+
+def threading_output(prompt):
+    ctx = get_script_run_ctx()
+    if len(selected_models) == 1:
+        cols = [st]
+    else:
+        cols = st.columns(len(selected_models))
+    threads = []
+
+    for i, model in enumerate(selected_models):
+        generator = call_chain(ctx, model, prompt)
+        thread = threading.Thread(target=lambda gen=generator, col=cols[i]: give_output(gen, col), daemon=True)
+        threads.append(thread)
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+def give_output(generator, col):
+    add_script_run_ctx(threading.current_thread(), get_script_run_ctx())
+    col.write_stream(generator)
+
+user_prompt = st.chat_input("Write a question")
+
+if user_prompt:
+    threading_output(user_prompt)
+
+
+
+
+    
+
+
+ import streamlit as st
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from streamlit.runtime.scriptrunner import add_script_run_ctx
+from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
+import threading
+from dotenv import load_dotenv
+
+load_dotenv()
+
+st.set_page_config("LLM TEST")
+
+def call_chain(ctx, model_name, prompt):
+    add_script_run_ctx(threading.current_thread(), ctx)
+    try:
+        # Creating a model instance
+        llm = ChatOpenAI(model=model_name, temperature=0, streaming=True)
+        input = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    "You are a Assistant which gives answer to user questions...",
+                ),
+                ("human", "{input}"),
+            ]
+        )
+        chain = input | llm
+        
+        # Yield each result from the generator
+        for i in chain.stream(input=prompt):
+            yield i.content
+    except Exception as e:
+        yield f"Error: {str(e)}"
+        return  # Signal end of the gen
+
+def threading_output(prompt):
+    ctx = get_script_run_ctx()  # Streamlit columns for output
+    cols = st.columns(2)
+    models = ['gpt-3.5-turbo', 'gpt-4-turbo']
+    threads = []
+
+    # Setup threads directly streaming outputs to UI components
+    for i, model in enumerate(models):
+        generator = call_chain(ctx, model, prompt)
+        thread = threading.Thread(target=lambda: give_output(generator, cols[i]), daemon=True)
+        threads.append(thread)
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+def give_output(generator, col):
+    add_script_run_ctx(threading.current_thread(), get_script_run_ctx())
+    output_text = []
+    col.write_stream(generator)  # Dynamically update column text
+
+user_prompt = st.chat_input("Write a question")
+
+
+if user_prompt:
+    threading_output(user_prompt)
+
+
+
+
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.prompts import ChatPromptTemplate
+from dotenv import load_dotenv
+import queue
+import threading
+import streamlit as st
+from streamlit.runtime.scriptrunner import add_script_run_ctx
+from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
+load_dotenv()
+
+
+st.set_page_config("LLM TEST")
+
+def call_chain(ctx, model_name, output_queue, prompt):
+    add_script_run_ctx(threading.current_thread(), ctx)
+    try:
+        # Using stream=True to continuously stream the output from the model
+        llm = ChatOpenAI(model=model_name, temperature=0, streaming=True)
+        input = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "You are a Assistant which gives answer to user questions and please dont tell user to ask you something if user writes a prompt then only generate output",
+            ),
+            ("human", "{input}"),
+        ]
+    )
+        chain = input | llm
+
+        for i in chain.stream(input = prompt):
+            output_queue.put(i.content)
+    except Exception as e:
+        output_queue.put(f"Error: {str(e)}")
+    finally:
+        output_queue.put(None)
+    
+    return output_queue
+
+def give_output(ctx, model, output_queue, cols):
+    add_script_run_ctx(threading.current_thread(), ctx)
+    output_text = []
+    cols = st.empty()
+    while True:
+        content = output_queue.get()
+        if content is None:
+            break
+        output_text.append(content)
+        formatted_output = " ".join(output_text)
+        cols.markdown(content)
+    return formatted_output
+
+def threading_output(prompt):
+    ctx = get_script_run_ctx()
+    queues = {'gpt-4-turbo': queue.Queue(), 'gpt-4-turbo': queue.Queue()}
+    models = ['gpt-4-turbo', 'gpt-4-turbo']
+    threads = []
+
+    for i, model in enumerate(models):
+            cols[i].markdown(model)
+            thread = threading.Thread(target=call_chain, args=(ctx, model, queues[model], prompt), daemon=True)
+            threads.append(thread)
+            thread.start()
+    
+    for i, model in enumerate(models):
+            thread = threading.Thread(target=give_output, args=(ctx, model, queues[model], cols[i]), daemon=True)
+            threads.append(thread)
+            thread.start()
+
+    for thread in threads:
+        thread.join()
+
+    
+
+user_prompt = st.chat_input(placeholder="Write a question")
+cols = st.columns(2)
+
+if user_prompt != None:
+    threading_output(user_prompt)
+
+
+
+
+
+
+
+    background-color: #0f1116;
+    position: sticky;
+    bottom: -15px;
+    margin-left: -15px;
+    /* margin-bottom: -50px; */
+    padding-left: 15px;
+    /* width: 438px; */
+    overflow: hidden;
+    padding-bottom: 15px;
+
+
+rgb(131, 201, 255)
+rgb(0, 104, 201)
+rgb(255, 171, 171)

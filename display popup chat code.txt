@@ -1,0 +1,69 @@
+import streamlit as st
+import plotly.graph_objects as go
+import numpy as np
+import time
+
+def animate_token_models(data, metric1, metric2, title, num_steps=50, step_delay=0.005):
+    model_names = [model['model_name'] for model in data]
+    final_metric1_values = [model[metric1] for model in data]
+    final_metric2_values = [model[metric2] for model in data]
+
+    max_metric1 = max(final_metric1_values)
+    max_metric2 = max(final_metric2_values)
+
+    placeholder = st.empty()  # Placeholder for the chart
+
+    fig = go.Figure(
+        layout={
+            "title": title,
+            "xaxis": {"title": "Models"},
+            "yaxis": {"title": "Values", "range": [0, max(final_metric1_values + final_metric2_values) + 50]},
+            "template": "plotly_dark",
+        }
+    )
+
+    for step in range(1, num_steps + 1):
+        current_metric1_values = [(v / num_steps) * step for v in final_metric1_values]
+        current_metric2_values = [(v / num_steps) * step for v in final_metric2_values]
+
+        fig.data = []  # Clear existing data
+        
+        bar1 = go.Bar(x=model_names, y=current_metric1_values, name=metric1)
+        bar2 = go.Bar(x=model_names, y=current_metric2_values, name=metric2)
+        
+        # Adding highest value annotation
+        annotations = [
+            {"x": name, "y": val, "xref": "x", "yref": "y",
+             "text": "Highest" if val == max_metric1 else "", "showarrow": True,
+             "arrowhead": 7, "ax": 0, "ay": -40} 
+            for name, val in zip(model_names, current_metric1_values) if val == max_metric1
+        ] + [
+            {"x": name, "y": val, "xref": "x", "yref": "y",
+             "text": "Highest" if val == max_metric2 else "", "showarrow": True,
+             "arrowhead": 7, "ax": 0, "ay": -40} 
+            for name, val in zip(model_names, current_metric2_values) if val == max_metric2
+        ]
+        
+        fig.add_traces([bar1, bar2])
+        fig.update_layout(annotations=annotations)
+
+        placeholder.plotly_chart(fig, use_container_width=True)
+        time.sleep(step_delay)
+
+data = [
+    {"model_name": "Model A", "prompt_tokens": np.random.randint(300, 400), "response_tokens": np.random.randint(200, 300),
+     "total_cost": np.random.randint(800, 1200), "current_prompt_cost": np.random.randint(80, 200)},
+    {"model_name": "Model B", "prompt_tokens": np.random.randint(300, 400), "response_tokens": np.random.randint(200, 300),
+     "total_cost": np.random.randint(800, 1200), "current_prompt_cost": np.random.randint(80, 200)}
+]
+
+st.title('Model Metrics Visualization')
+tab1, tab2 = st.tabs(["Token Metrics", "Cost Metrics"])
+
+with tab1:
+    st.header("Token Comparison for Models")
+    animate_token_models(data, 'prompt_tokens', 'response_tokens', 'Token Metrics')
+
+with tab2:
+    st.header("Cost Comparison for Models")
+    animate_token_models(data, 'total_cost', 'current_prompt_cost', 'Cost Metrics')
