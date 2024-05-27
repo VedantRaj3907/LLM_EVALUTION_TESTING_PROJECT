@@ -16,7 +16,7 @@ def get_current_page_name():
 
 
 def make_sidebar(session):
-    if get_current_page_name() == "1_🙎‍♂️_UserLogin.py":
+    if get_current_page_name() == "1_UserLogin.py":
         return
     with st.sidebar:
         if session:
@@ -39,4 +39,4 @@ def make_sidebar(session):
                 server_state['session'] = None
 
         elif not session:
-            st.switch_page("1_🙎‍♂️_UserLogin.py")
+            st.switch_page("1_UserLogin.py")

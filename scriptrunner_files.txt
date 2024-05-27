@@ -514,3 +514,11 @@ else:
                     sign_up(email, password)
                 else:
                     st.error("Please provide both email and password.")
+
+
+
+OPENAI_API_KEY="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"
+GEMINI_API_KEY="AIzaSyCCTOHO2ipSnwHyRkx-TEj73D6UUnktslc"
+HUGGINGFACE_API_KEY="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"
+SUPABASE_URL="https://cptvgsqarjrhkxiuuptj.supabase.co"
+SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNwdHZnc3FhcmpyaGt4aXV1cHRqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcxNDM2Njk4MSwiZXhwIjoyMDI5OTQyOTgxfQ.gCItJEn9Ny0EFaFoZ44r0Oxo-vtSKqjQ6ibA3Yf-sJY"
