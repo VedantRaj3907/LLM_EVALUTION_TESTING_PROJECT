@@ -1,2 +1,2 @@
-[client]
-showSidebarNavigation=False
+[server]
+scriptPath = "src/1_🙎‍♂️_UserLogin.py"
