@@ -2,14 +2,14 @@ import time
 import streamlit as st
 import plotly.graph_objects as go
 from navigation import make_sidebar
-from chat_history_db import fetch_model_details
+from chat_history_db import fetch_model_details, fetch_model_votes
 from streamlit_server_state import server_state
 
 session = server_state.get('session')
 
-userid =  session.user.id 
+
 make_sidebar(session)
-def create_bar_chart(data, y_key, title, num_steps=50, step_delay=0.005):
+def create_bar_chart(data, y_key, title, num_steps=50, step_delay=0.005, highlight_max=True):
     if not data:
         st.warning(f"No data available for {title}.")
         return
@@ -17,8 +17,7 @@ def create_bar_chart(data, y_key, title, num_steps=50, step_delay=0.005):
     model_names = [model['model_name'] for model in data]
     final_values = [model[y_key] for model in data]
 
-    non_zero_values = [value for value in final_values if value > 0]
-    min_value = min(non_zero_values) if non_zero_values else 0
+    highlight_value = max(final_values) if highlight_max else min(final_values) if final_values else 0
 
     placeholder = st.empty()
     fig = go.Figure(layout={
@@ -30,7 +29,7 @@ def create_bar_chart(data, y_key, title, num_steps=50, step_delay=0.005):
     
     for step in range(1, num_steps + 1):
         current_values = [(value * (step / num_steps)) for value in final_values]
-        colors = ['green' if value == min_value and step == num_steps else 'lightslategray' for value in final_values]
+        colors = ['green' if value == highlight_value and step == num_steps else 'lightslategray' for value in final_values]
         
         # Enhanced format for display
         if 'cost' in y_key:
@@ -57,15 +56,10 @@ def create_bar_chart(data, y_key, title, num_steps=50, step_delay=0.005):
         time.sleep(step_delay)
 
 def main():
-    # Check if the user has changed
-    if 'userid' in st.session_state and st.session_state['userid'] != userid:
-        # Clear the session_state related to the charts
-        st.session_state['selected_models'] = ['gpt-3.5-turbo']
-
-    # Store the current user id in the session state
-    st.session_state['userid'] = userid
     model_name = fetch_model_details().keys()
     data = []
+
+    model_votes = fetch_model_votes()
     
     for i in model_name:
         if i in st.session_state and i in st.session_state['selected_models']:
@@ -80,13 +74,9 @@ def main():
                 "time_taken": model_data['time_taken']
             })
 
-    # If the user has changed, update the selected_models in the session state
-    if 'userid' in st.session_state and st.session_state['userid'] != userid:
-        st.session_state['selected_models'] = [i['model_name'] for i in data]
-
     st.title('Model Metrics Visualization')
     # Main Tabs for Token Metrics and Cost Metrics
-    main_tab1, main_tab2 = st.tabs(["Token Metrics", "Cost and Time Metrics"])
+    main_tab1, main_tab2, main_tab3 = st.tabs(["Token Metrics", "Cost and Time Metrics", "Users Votings"])
     
     with main_tab1:
         token_metric = st.selectbox(
@@ -95,7 +85,7 @@ def main():
             index=0,
             format_func=lambda x: x.replace('_', ' ').title()
         )
-        create_bar_chart(data, token_metric, f'{token_metric.replace("_", " ").title()} per Model')
+        create_bar_chart(data, token_metric, f'{token_metric.replace("_", " ").title()} per Model', highlight_max=False)
     
     with main_tab2:
         cost_time_metric = st.selectbox(
@@ -104,10 +94,15 @@ def main():
             index=0,
             format_func=lambda x: x.replace('_', ' ').title()
         )
-        create_bar_chart(data, cost_time_metric, f'{cost_time_metric.replace("_", " ").title()} per Model')
+        create_bar_chart(data, cost_time_metric, f'{cost_time_metric.replace("_", " ").title()} per Model', highlight_max=False)
+    
+    with main_tab3:
+        st.header("User Votes for Models")
+        create_bar_chart(model_votes, 'total_votes', 'Total Votes per Model', highlight_max=True)
 
     #Mainting session state between pages.
-    st.session_state['selected_models'] = [i['model_name'] for i in data]
+    if len(data) != 0:
+        st.session_state['selected_models'] = [i['model_name'] for i in data]
 
 
 if __name__ == "__main__":

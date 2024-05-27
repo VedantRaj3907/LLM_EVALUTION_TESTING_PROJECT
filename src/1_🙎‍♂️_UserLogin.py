@@ -2,6 +2,7 @@ import streamlit as st
 from supabase import create_client, Client
 from dotenv import load_dotenv
 import os
+import time
 from streamlit_server_state import server_state
 
 load_dotenv()
@@ -56,18 +57,6 @@ def sign_in(email, password):
         server_state['session'] = user
     except Exception as e:
         st.error(f"Error: {e}")
-
-def confirm_user(session_id, user_id):
-    try:
-        # Assuming the confirmation token and user_id are passed as query parameters
-        user = supabase.auth.api.get_user(session_id)
-        if user:
-            server_state['session'] = user
-            st.success("Email confirmed and sign-in successful!")
-            st.switch_page('pages/2_🌍_main.py')
-    except Exception as e:
-        st.error(f"Confirmation error: {e}")
-
 
 if 'session' in server_state and server_state['session']:
     st.switch_page('pages/2_🌍_main.py')

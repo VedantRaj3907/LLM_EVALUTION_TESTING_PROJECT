@@ -3,6 +3,7 @@ from time import sleep
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.source_util import get_pages
 from streamlit_server_state import server_state
+from chat_history_db import delete_chat_history
 import time
 
 def get_current_page_name():
@@ -32,9 +33,10 @@ def make_sidebar(session):
             st.write("")
 
             if st.button("Log out"):
-                print("$"*20)
                 print("LOGGING OUT")
+                delete_chat_history(session.user.id)
                 st.session_state.clear()
+                st.toast('Logged out successfully', icon='✅')
                 time.sleep(1)
                 server_state['session'] = None
 

@@ -15,7 +15,7 @@ sys.path.append('./VersionControl')
 from streamlit_extras.bottom_container import bottom
 from VersionControl.SaveVersion import Saving_Version
 from streamlit.runtime.scriptrunner import add_script_run_ctx
-from chat_history_db import append_message, get_history, fetch_model_details, fetch_user_prompts, insert_saved_prompt, fetch_saved_prompt_titles, insert_version_prompt
+from chat_history_db import append_message, get_history, fetch_model_details, fetch_user_prompts, insert_saved_prompt, fetch_saved_prompt_titles, insert_version_prompt, update_model_uservotes
 from streamlit.runtime.scriptrunner.script_run_context import get_script_run_ctx
 ################################################################################################################
 MAX_HISTORY_LENGTH = 5
@@ -254,8 +254,13 @@ for model_name in MODEL_CHOICES:
         st.session_state[f'{model_name}_p_value'] = 0.5
         st.session_state[f'{model_name}_max_output_tokens'] = 150
 
-user_id = session.user.id
+user_id = session.user.id 
+
+def submitted_user_vote(model_name, user_prompt):
+    update_model_uservotes(model_name)
+    st.session_state['last_voted_prompt'] = user_prompt
 with bottom():
+    
     popover_col, input_col, select_col = st.columns([1, 9, 1])
 
     with input_col:
@@ -341,6 +346,32 @@ with bottom():
                 st.experimental_rerun()  # Manually trigger a rerun
             if len(selected_models) < 1:
                 st.write("SELECT AT LEAST ONE MODEL")
+    
+    # Check if the user has written a prompt and not voted for it yet
+    with st.popover("🗳️ Vote"):
+    # Check if the user has written a prompt and not voted for it yet
+        if 'current_prompt' in st.session_state and st.session_state['current_prompt'] and ('last_voted_prompt' not in st.session_state or st.session_state['last_voted_prompt'] != st.session_state['current_prompt']) and ('submit_clicked' not in st.session_state) and len(selected_models) >= 2:
+            # Get the models selected by the user
+            selected_models = st.session_state["selected_models"]
+            
+            # Create radio buttons for the selected models
+            model_vote = st.radio("Vote for a model:", options=selected_models, key='model_vote')
+            
+            # Create a submit button
+            if st.button('Submit Vote'):
+                # Store the voted model and the current prompt in the session state when the submit button is clicked
+                st.session_state['voted_model'] = model_vote
+                submitted_user_vote(model_vote, st.session_state['current_prompt'])
+                st.session_state['last_voted_prompt'] = st.session_state['current_prompt']
+                
+                st.experimental_rerun()
+                
+        elif 'submit_clicked' in st.session_state:
+            st.write("Already Voted for the current prompt")  # Empty content
+        elif len(selected_models) < 2:
+            st.write("Please select at least two models before voting.")
+        else:
+            st.write("Please write a prompt before voting.")
 
 if user_prompt and selected_models:
     # Store user input into each model's history
