@@ -1,2 +1,1 @@
-1) When Switching the tabs the parameters of models are not being saved.
 3) cache the sidebar to not run again on everything.

@@ -15,6 +15,8 @@ def antropic_model(model_name):
 def openai_model(model_name, model_id, user_id, prompt, temperature, p_value, max_tokens):
 
     start_time = time.time()
+    print("*"*10)
+    print(f'temperature: - {temperature}\nmax_tokens: - {max_tokens}')
     chat_history_for_model = get_history(user_id, model_id, 5, model_name)
     messages = chat_history_for_model + [
                 {"role": "user", "content": prompt}

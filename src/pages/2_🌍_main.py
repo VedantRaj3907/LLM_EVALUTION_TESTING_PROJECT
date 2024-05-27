@@ -38,7 +38,6 @@ def call_chain(ctx, model_name, prompt):
         model_id = MODEL_DETAILS.get(model_name)
         add_script_run_ctx(threading.current_thread(), ctx)
         try:
-            # Retrieve settings from session state
             temperature = st.session_state.get(f"{model_name}_temperature", 0.5)
             p_value = st.session_state.get(f"{model_name}_pvalue", 0.5)
             max_tokens = st.session_state.get(f"{model_name}_max_output_tokens", 150)
@@ -195,6 +194,8 @@ def display_message(ctx, col, prompt, generator, model_name):
 #For Popover menus
 def submitted_button(model_name, temperature, p_value, max_tokens, col):
     with col.container():
+        print("YES")
+        print(st.session_state[f'{model_name}_max_output_tokens'], max_tokens)
         st.session_state[f'{model_name}_temperature'] = temperature
         st.session_state[f'{model_name}_pvalue'] = p_value
         st.session_state[f'{model_name}_max_output_tokens'] = max_tokens
@@ -221,15 +222,16 @@ def display_popovers(ctx, col, model_name, model_data=None):
             st.markdown(f"**Total Cost**: ${data['total_cost']:.4f}")
             st.markdown(f"**Time Taken**: {data['time_taken']:.4f}s")
         with st.popover("⛭ Properties"):
-            with st.form(key=f'{model_name}_settings_form'):
-                # Define sliders within the form
-                temperature = st.slider("Temperature:", min_value=0.0, max_value=1.0, value=st.session_state[f'{model_name}_temperature'], step=0.01)
-                p_value = st.slider("P Value:", min_value=0.0, max_value=1.0, value=st.session_state[f'{model_name}_p_value'], step=0.01)
-                max_tokens = st.slider("Max Output Tokens:", min_value=16, max_value=1000, value=st.session_state[f'{model_name}_max_output_tokens'], step=10)
+            temperature = st.slider("Temperature:", min_value=0.0, max_value=1.0, value=st.session_state[f'{model_name}_temperature'], step=0.01)
+            p_value = st.slider("P Value:", min_value=0.0, max_value=1.0, value=st.session_state[f'{model_name}_p_value'], step=0.01)
+            max_tokens = st.slider("Max Output Tokens:", min_value=16, max_value=1000, value=st.session_state[f'{model_name}_max_output_tokens'], step=10)
 
-                # Submit button for the form
-                st.form_submit_button("Submit Settings", on_click=submitted_button, args=(model_name, temperature, p_value, max_tokens, col))
-
+            # Submit button outside the form
+            if st.button("Submit Settings"):
+                st.session_state[f'{model_name}_temperature'] = temperature
+                st.session_state[f'{model_name}_p_value'] = p_value
+                st.session_state[f'{model_name}_max_output_tokens'] = max_tokens
+                st.experimental_rerun()
 def give_output(ctx, generator, col, model_id, prompt, model_name):
 
     display_chat_history(ctx, col, model_id, model_name)
