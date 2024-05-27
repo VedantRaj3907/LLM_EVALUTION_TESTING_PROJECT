@@ -91,7 +91,7 @@ class GOOGLE_EVAL:
         if messages == []:
             return 0
         tokens = model.count_tokens(messages)
-        return tokens
+        return tokens.total_tokens
         
     
     def cal_pricing_token(self, model_name, prompt_token, response_token):

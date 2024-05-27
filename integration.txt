@@ -1,0 +1,4 @@
+1) When Switching the tabs the parameters of models are not being saved.
+2) cannot go to sign in page again when logged in.
+3) cache the sidebar to not run again on everything.
+4) server state managment of user to not click on 2 log out buttons

@@ -4,6 +4,7 @@ from langchain_anthropic import ChatAnthropic
 from chat_history_db import append_message, get_history, fetch_model_details
 import google.generativeai as genai
 import os
+import time
 load_dotenv()
 client = OpenAI()
 
@@ -12,8 +13,10 @@ def antropic_model(model_name):
     return llm
 
 def openai_model(model_name, model_id, user_id, prompt, temperature, p_value, max_tokens):
+
+    start_time = time.time()
     chat_history_for_model = get_history(user_id, model_id, 5, model_name)
-    messages = [{"role": "system", "content": "You are a helpful assistant."}] + chat_history_for_model + [
+    messages = chat_history_for_model + [
                 {"role": "user", "content": prompt}
                 ]
 
@@ -27,9 +30,13 @@ def openai_model(model_name, model_id, user_id, prompt, temperature, p_value, ma
 
         )
     
-    return response, messages
+    end_time = time.time()
+    response_time = end_time - start_time
+    return response, messages, response_time
 
 def gemini_model(model_name, model_id, user_id, prompt, temperature, p_value, max_tokens):
+
+    start_time = time.time()
 
     chat_history_for_model = get_history(user_id, model_id, 5, model_name)
     genai.configure(api_key=os.environ.get('GEMINI_API_KEY'))
@@ -43,5 +50,6 @@ def gemini_model(model_name, model_id, user_id, prompt, temperature, p_value, ma
 
     response = chat_history.send_message(prompt, stream=True)
 
-
-    return modelg, response, chat_history_for_model
+    end_time = time.time()
+    response_time = end_time - start_time
+    return modelg, response, chat_history_for_model, response_time

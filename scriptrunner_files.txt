@@ -229,3 +229,288 @@ if user_prompt != None:
 rgb(131, 201, 255)
 rgb(0, 104, 201)
 rgb(255, 171, 171)
+
+
+
+
+
+
+
+#################### SENTENCE SIMILARITY ##############################
+
+from transformers import AutoTokenizer, AutoModel
+import torch
+from scipy.spatial.distance import cosine
+
+def load_model(model_name="sentence-transformers/all-MiniLM-L6-v2"):
+    """ Load the tokenizer and model """
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModel.from_pretrained(model_name)
+    return tokenizer, model
+
+def get_sentence_embedding(sentence, tokenizer, model):
+    """ Returns the embedding of a sentence """
+    inputs = tokenizer(sentence, return_tensors='pt', padding=True, truncation=True)
+    with torch.no_grad():
+        outputs = model(**inputs)
+    # Use mean of last hidden state as sentence representation
+    sentence_embedding = outputs.last_hidden_state.mean(dim=1).squeeze()
+    return sentence_embedding
+
+def calculate_similarity(sentence1, sentence2, tokenizer, model):
+    """ Calculate cosine similarity between embeddings of two sentences """
+    emb1 = get_sentence_embedding(sentence1, tokenizer, model)
+    emb2 = get_sentence_embedding(sentence2, tokenizer, model)
+    similarity = 1 - cosine(emb1.numpy(), emb2.numpy())
+    return similarity
+
+# Example usage
+tokenizer, model = load_model()
+sentence1 = "Here is the original version of the prompt."
+sentence2 = "Here is the updated version of the prompt with different content."
+
+similarity = calculate_similarity(sentence1, sentence2, tokenizer, model)
+print(f"Semantic Similarity: {similarity:.2f}")
+
+
+
+##########################################################################################
+
+import streamlit as st
+from supabase import create_client, Client
+import webbrowser
+# Supabase credentials
+SUPABASE_URL = "https://cptvgsqarjrhkxiuuptj.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNwdHZnc3FhcmpyaGt4aXV1cHRqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcxNDM2Njk4MSwiZXhwIjoyMDI5OTQyOTgxfQ.gCItJEn9Ny0EFaFoZ44r0Oxo-vtSKqjQ6ibA3Yf-sJY"
+
+# Initialize Supabase client
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# Streamlit page setup
+st.set_page_config(page_title="App", page_icon="🔒")
+
+# Initialize session state variables
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+if 'email' not in st.session_state:
+    st.session_state.email = ''
+
+def check_user_exists(email):
+    try:
+        response = supabase.from_("user_view").select("id").eq("email", email).execute()
+        if response.data:
+            return True
+        return False
+    except Exception as e:
+        st.error(f"Error checking user: {e}")
+        return False
+
+def sign_up(email, password):
+    if check_user_exists(email):
+        st.error("This email is already registered. Please sign in instead.")
+        return
+
+    try:
+        user = supabase.auth.sign_up({
+            'email': email,
+            'password': password,
+        })
+        st.success("Sign-up successful! Please check your email to confirm your account.")
+    except Exception as e:
+        st.error(f"Error: {e}")
+
+def sign_in(email, password):
+    try:
+        user = supabase.auth.sign_in_with_password({
+            'email': email,
+            'password': password,
+        })
+        st.session_state.logged_in = True
+        st.session_state.email = email
+        st.success("Sign-in successful!")
+        st.experimental_rerun()  # Reload the app to update the session state
+    except Exception as e:
+        st.error(f"Error: {e}")
+
+def sign_in_with_google():
+    try:
+        # This will redirect the user to the Google sign-in page
+        result = supabase.auth.sign_in_with_oauth({"provider": 'google'})
+        webbrowser.open(result.url)
+        st.session_state.logged_in = True
+    except Exception as e:
+        st.error(f"Error: {e}")
+
+def sign_out():
+    st.session_state.logged_in = False
+    st.session_state.email = ''
+    st.experimental_rerun()
+
+def confirm_user(session_id, user_id):
+    try:
+        # Assuming the confirmation token and user_id are passed as query parameters
+        user = supabase.auth.api.get_user(session_id)
+        if user:
+            st.session_state.logged_in = True
+            st.session_state.email = user['email']
+            st.success("Email confirmed and sign-in successful!")
+            st.experimental_rerun()  # Reload the app to update the session state
+    except Exception as e:
+        st.error(f"Confirmation error: {e}")
+
+
+if st.session_state.logged_in:
+    st.sidebar.write(f"Logged in as {st.session_state.email}")
+    if st.sidebar.button("Logout"):
+        sign_out()
+    
+    # Main content for logged-in users
+    st.write("Welcome to the app!")
+    # Add your application content here
+
+else:
+    st.title("Welcome to the App")
+    st.write("Please sign in or sign up to continue.")
+
+    auth_action = st.selectbox("Choose an action", ["Sign In", "Sign Up"])
+    email = st.text_input("Email")
+    password = st.text_input("Password", type="password")
+
+    if auth_action == "Sign Up":
+        if st.button("Sign Up"):
+            if email and password:
+                sign_up(email, password)
+            else:
+                st.error("Please provide both email and password.")
+    else:
+        if st.button("Sign In"):
+            if email and password:
+                sign_in(email, password)
+            else:
+                st.error("Please provide both email and password.")
+        if st.button("Sign In with Google"):
+            sign_in_with_google()
+
+
+
+
+######################################################################################################
+######################################################################################################
+######################################################################################################
+######################################################################################################
+
+
+import streamlit as st
+from supabase import create_client, Client
+from dotenv import load_dotenv
+from navigation import make_sidebar
+import os
+
+load_dotenv()
+# Supabase credentials
+SUPABASE_URL = os.environ.get('SUPABASE_URL')
+SUPABASE_KEY = os.environ.get('SUPABASE_KEY')
+
+# Initialize Supabase client
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# Streamlit page setup
+st.set_page_config(page_title="App", page_icon="🔒")
+
+# Initialize session state variables
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+if 'email' not in st.session_state:
+    st.session_state.email = ''
+
+def check_user_exists(email):
+    try:
+        response = supabase.from_("user_view").select("id").eq("email", email).execute()
+        if response.data:
+            return True
+        return False
+    except Exception as e:
+        st.error(f"Error checking user: {e}")
+        return False
+
+def sign_up(email, password):
+    if check_user_exists(email):
+        st.error("This email is already registered. Please sign in instead.")
+        return
+
+    try:
+        user = supabase.auth.sign_up({
+            'email': email,
+            'password': password,
+        })
+        st.success("Sign-up successful! Please check your email to confirm your account.")
+    except Exception as e:
+        st.error(f"Error: {e}")
+
+def sign_in(email, password):
+    try:
+        user = supabase.auth.sign_in_with_password({
+            'email': email,
+            'password': password,
+        })
+        st.session_state.logged_in = True
+        st.session_state.email = email
+        st.switch_page('pages/2_🌍_main.py')
+    except Exception as e:
+        st.error(f"Error: {e}")
+
+def sign_out():
+    st.session_state.logged_in = False
+    st.session_state.email = ''
+    st.experimental_rerun()
+
+def confirm_user(session_id, user_id):
+    try:
+        # Assuming the confirmation token and user_id are passed as query parameters
+        user = supabase.auth.api.get_user(session_id)
+        if user:
+            st.session_state.logged_in = True
+            st.session_state.email = user['email']
+            st.success("Email confirmed and sign-in successful!")
+            st.experimental_rerun()  # Reload the app to update the session state
+    except Exception as e:
+        st.error(f"Confirmation error: {e}")
+
+
+if st.session_state.logged_in:
+    st.sidebar.write(f"Logged in as {st.session_state.email}")
+    if st.sidebar.button("Logout"):
+        sign_out()
+    
+    # Main content for logged-in users
+    st.write("Welcome to the app!")
+    # Add your application content here
+
+else:
+    
+    # Creating columns for layout
+    col1, col2, col3 = st.columns([1,3,1])  # Adjust the numbers to change the width of the columns
+
+    with col2:
+        # Creating tabs for Sign In and Sign Up
+        tab1, tab2 = st.tabs(["Sign In", "Sign Up"])
+
+        with tab1:
+            st.markdown("<h1 style='text-align: center;'>Sign In</h1>", unsafe_allow_html=True)
+            email = st.text_input("Email", key='login_email')
+            password = st.text_input("Password", type="password", key='login_pass')
+            if st.button("Sign In"):
+                if email and password:
+                    sign_in(email, password)
+                else:
+                    st.error("Please provide both email and password.")
+
+        with tab2:
+            st.markdown("<h1 style='text-align: center;'>Sign Up</h1>", unsafe_allow_html=True)
+            email = st.text_input("Email", key='signup_email')
+            password = st.text_input("Password", type="password")
+            if st.button("Sign Up"):
+                if email and password:
+                    sign_up(email, password)
+                else:
+                    st.error("Please provide both email and password.")
