@@ -13,6 +13,12 @@ make_sidebar(session)
 st.title("Saved Prompts")
 
 userid =  session.user.id 
+
+if 'userid' in st.session_state and st.session_state['userid'] != userid:
+    st.session_state['check_rerun_prompts'] = True
+
+st.session_state['userid'] = userid
+
 if 'check_rerun_prompts' in st.session_state and st.session_state['check_rerun_prompts'] == True:
     data = fetch_all_prompt_versions(userid)
     st.session_state['version_prompts_data'] = data
@@ -23,7 +29,6 @@ else:
         st.session_state['version_prompts_data'] = data
     else:
         data = st.session_state['version_prompts_data']
-        st.session_state['check_rerun_prompts'] = False
 
 # Adding custom CSS to style the containers and make them scrollable
 st.markdown("""

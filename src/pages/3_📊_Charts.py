@@ -7,7 +7,7 @@ from streamlit_server_state import server_state
 
 session = server_state.get('session')
 
-
+userid =  session.user.id 
 make_sidebar(session)
 def create_bar_chart(data, y_key, title, num_steps=50, step_delay=0.005):
     if not data:
@@ -57,6 +57,13 @@ def create_bar_chart(data, y_key, title, num_steps=50, step_delay=0.005):
         time.sleep(step_delay)
 
 def main():
+    # Check if the user has changed
+    if 'userid' in st.session_state and st.session_state['userid'] != userid:
+        # Clear the session_state related to the charts
+        st.session_state['selected_models'] = ['gpt-3.5-turbo']
+
+    # Store the current user id in the session state
+    st.session_state['userid'] = userid
     model_name = fetch_model_details().keys()
     data = []
     
@@ -72,6 +79,10 @@ def main():
                 "total_cost": model_data['total_cost'],
                 "time_taken": model_data['time_taken']
             })
+
+    # If the user has changed, update the selected_models in the session state
+    if 'userid' in st.session_state and st.session_state['userid'] != userid:
+        st.session_state['selected_models'] = [i['model_name'] for i in data]
 
     st.title('Model Metrics Visualization')
     # Main Tabs for Token Metrics and Cost Metrics

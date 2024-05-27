@@ -32,10 +32,11 @@ def make_sidebar(session):
             st.write("")
 
             if st.button("Log out"):
+                print("$"*20)
+                print("LOGGING OUT")
+                st.session_state.clear()
                 time.sleep(1)
                 server_state['session'] = None
 
         elif not session:
-            # If anyone tries to access a secret page without being logged in,
-            # redirect them to the login page
             st.switch_page("1_🙎‍♂️_UserLogin.py")

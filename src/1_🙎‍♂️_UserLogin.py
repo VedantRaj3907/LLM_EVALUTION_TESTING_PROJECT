@@ -1,7 +1,6 @@
 import streamlit as st
 from supabase import create_client, Client
 from dotenv import load_dotenv
-from navigation import make_sidebar
 import os
 from streamlit_server_state import server_state
 
@@ -57,12 +56,6 @@ def sign_in(email, password):
         server_state['session'] = user
     except Exception as e:
         st.error(f"Error: {e}")
-
-def sign_out():
-    st.session_state.logged_in = False
-    st.session_state.email = ''
-    server_state['session'] = None  # Clear the session
-    st.switch_page('1_🙎‍♂️_UserLogin.py')  # Switch to login page after logging out
 
 def confirm_user(session_id, user_id):
     try:
